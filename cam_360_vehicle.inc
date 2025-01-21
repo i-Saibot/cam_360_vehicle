@@ -11,11 +11,10 @@
 
 
 const
-	CAM_360_VEH_MAX_VEHICLE_MODELS		= 211,
-	CAM_360_VEH_MIN_VEHICLE_MODEL_ID	= 400,
-	CAM_360_VEH_MAX_VEHICLE_MODEL_ID	= 611;
+	CAM_360_VEH_MIN_VEHICLE_MODELID	= 400,
+	CAM_360_VEH_MAX_VEHICLE_MODELID	= 611;
 
-static gCam360VehModelSpawn[CAM_360_VEH_MAX_VEHICLE_MODELS] =
+static gCam360VehDefaultModelSpawn[] =
 {
 	400,
 	401,
@@ -32,11 +31,17 @@ static
 	Float:gCam360VehPlayerCoordX[MAX_PLAYERS],
 	Float:gCam360VehPlayerCoordY[MAX_PLAYERS],
 	Float:gCam360VehPlayerCoordZ[MAX_PLAYERS],
-	IteratorArray:Cam360VehiclesID[MAX_PLAYERS]<MAX_VEHICLES>;
+	IteratorArray:Cam360VehiclesID[MAX_PLAYERS]<MAX_VEHICLES>,
+	Iterator:Cam360VehiclesModels<CAM_360_VEH_MAX_VEHICLE_MODELID + 1>;
 
 public OnGameModeInit()
 {
 	Iter_Init(Cam360VehiclesID);
+
+	for (new i; i < sizeof(gCam360VehDefaultModelSpawn); i++)
+	{
+		cam360veh_SetModelsInArray(gCam360VehDefaultModelSpawn[i]);
+	}
 #if defined camp360veh_OnGameModeInit
 		return camp360veh_OnGameModeInit();
 	#else
@@ -147,6 +152,7 @@ CMD:veh(playerid, params[])
 		Float:veh_y,
 		Float:rad_angle,
 		vehicleid,
+		index,
 		Float:angle_step = 360.0 / float(max_count);
 
 	GetPlayerPos(playerid, x, y, z);
@@ -155,15 +161,15 @@ CMD:veh(playerid, params[])
 	gCam360VehPlayerCoordY[playerid] = y;
 	gCam360VehPlayerCoordZ[playerid] = z;
 
-	for (new i; i < max_count; i++)
+	foreach (Cam360VehiclesModels, modelid)
 	{
-		angle = angle_step * float(i);
+		angle = angle_step * float(index++);
 		rad_angle = angle * (PI / 180.0);
 		veh_x = x + floatcos(rad_angle) * DISTANCE_BETWEEN_VEHICLE;
 		veh_y = y + floatsin(rad_angle) * DISTANCE_BETWEEN_VEHICLE;
 
 		vehicleid = CreateVehicle(
-			gCam360VehModelSpawn[i],
+			modelid,
 			veh_x,
 			veh_y,
 			z,
@@ -249,17 +255,7 @@ static cam360veh_DestroyVehicle(playerid)
 
 static cam360veh_GetCountVehicle()
 {
-	new count;
-
-	for (new i; i < sizeof(gCam360VehModelSpawn); i++)
-	{
-		if (gCam360VehModelSpawn[i] == 0)
-		{
-			break;
-		}
-		count++;
-	}
-	return count;
+	return Iter_Count(Cam360VehiclesModels);
 }
 
 
@@ -269,13 +265,18 @@ static cam360veh_GetCountVehicle()
 
 */
 
-stock cam360veh_SetModelIdInArray(index, modelid)
+stock cam360veh_ClearModelsInArray()
 {
-	if (!(CAM_360_VEH_MIN_VEHICLE_MODEL_ID <= modelid <= CAM_360_VEH_MAX_VEHICLE_MODEL_ID)
-	|| !(0 <= index <= CAM_360_VEH_MAX_VEHICLE_MODELS))
+	Iter_Clear(Cam360VehiclesModels);
+	return 1;
+}
+
+stock cam360veh_SetModelsInArray(modelid)
+{
+	if (!(CAM_360_VEH_MIN_VEHICLE_MODELID <= modelid <= CAM_360_VEH_MAX_VEHICLE_MODELID))
 	{
 		return 0;
 	}
-	gCam360VehModelSpawn[index] = modelid;
+	Iter_Add(Cam360VehiclesModels, modelid);
 	return 1;
 }
